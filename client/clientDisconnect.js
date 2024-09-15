@@ -4,12 +4,19 @@ This code defines a function that handles a client disconnection from the server
 
 // Import the required functions from the 'globals.js' module
 const globals = require('../globals.js');
+const inGameLeaderboard = require('../score/inGameLeaderboard.js');
+const removePlayer = require('../multiplayer/removePlayer.js')
 
 // Define a function to handle a client disconnection
 function clientDisconnect(socket, io) {
   console.log("");
   console.log('[clientDisconnect]: A user disconnected.');
 
+      // Set the IO global
+    globals.setGlobal('io', io);
+
+  // Send a signal to the clients to remove the player
+  removePlayer(socket, io);
   // Update list of connected clients
   let connectedclients = globals.getGlobal('connectedclients');
 
@@ -23,13 +30,13 @@ function clientDisconnect(socket, io) {
   }
 
   // Log the updated list of connected clients to the console
-  console.log('[clientDisconnect]: Connected clients:', connectedclients);
+  //console.log('[clientDisconnect]: Connected clients:', connectedclients);
 
   // Update the global variable with the updated array
   globals.setGlobal('connectedclients', connectedclients);
 
   // Emit the 'update' event to the 'frontendmonitor' room with the current list of user IDs
-  console.log("[clientIdentify]: Sending user ID's:", connectedclients);
+  //console.log("[clientIdentify]: Sending user ID's:", connectedclients);
   io.to('frontendmonitor').emit('update', connectedclients);
 }
 

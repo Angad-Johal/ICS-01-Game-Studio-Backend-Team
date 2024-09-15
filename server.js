@@ -1,3 +1,14 @@
+const globals = require('./globals.js');
+const { MongoClient } = require("mongodb");
+require('dotenv').config(); // Load environment variables from .env file
+
+// MongoDB setup
+const uri = process.env.MONGODB_URI;
+const client = new MongoClient(uri);
+
+globals.setGlobal('mongoDbClient', client);
+
+
 // Server Setup & Dependancies 
 const express = require('express');
 const cors = require('cors');
@@ -19,17 +30,24 @@ const clientIdentify = require('./client/clientIdentify.js')
 const clientLogin = require('./client/clientLogin.js');
 const clientMessage = require('./client/clientMessage.js');
 const clientDisconnect = require('./client/clientDisconnect.js');
-const sortUsersByPoints = require('./datamanagement/getLeaderboard.js')
+const sortUsersByPoints = require('./datamanagement/getLeaderboard.js');
+const fooddelete = require('./food/foodDelete.js');
+const updatePosition = require('./multiplayer/updatePosition.js');
+const getUserStats = require('./datamanagement/getUserStats.js')
+const updateCharacters = require('./multiplayer/updateCharacter.js')
+const eatPlayer = require('./multiplayer/playerHit.js')
+const startGame = require('./multiplayer/timer.js')
+startGame();
 
 // Generate Food
-require('./foodManagement.js');
+require('./food/foodManagement.js');
 
 let intervalID;
 
 io.on('connection', (socket) => {
-//joe on a boat is very cool
+
     // Handle Client Connections
-    clientConnect(socket);
+    clientConnect(socket, io);
 
     // Handle Client Messages
     socket.on('ident', (message) => {
@@ -45,9 +63,32 @@ io.on('connection', (socket) => {
         clientMessage(message, socket, io)
     });
 
+    socket.on('foodcollision', (message) => {
+        fooddelete(message, socket, io)
+    });
+
+    socket.on('playercollision', (message) => {
+        eatPlayer(message, socket, io)
+    });
+
+    socket.on('userstats', async (message) => {
+        const userStatsData = await getUserStats(message);
+        socket.emit('userstatsdata', userStatsData);
+      });
+      
+    socket.on('updatecharacter', (message) => {
+        console.log('updatecharacter', message);
+        updateCharacters(message, socket)
+    });
+
     // Handle Client Disconnections
     socket.on('disconnect', () => {
         clientDisconnect(socket, io);
+    });
+
+    socket.on('updateclientposition', (message) => {
+        // Expect {"username:" //, "x": //, "y": //}
+        updatePosition(message, socket, io);
     });
 
     // Start sending test messages to all clients in the 'users' room
@@ -59,14 +100,12 @@ io.on('connection', (socket) => {
                 'This is a test message from the server!');
         }, 10000);
     }
-        
+
 });
 
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 
-
 });
 
-// Sort user data by points
 sortUsersByPoints();

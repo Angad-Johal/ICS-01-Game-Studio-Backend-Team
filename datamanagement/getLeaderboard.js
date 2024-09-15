@@ -1,14 +1,32 @@
-const fs = require('fs');
+const { MongoClient } = require('mongodb');
+const globals = require("../globals.js")
 
-function sortUsersByPoints() {
-  // Read the existing user data from the users.json file
-  const userData = JSON.parse(fs.readFileSync('credentials.json'));
+// MongoDB setup
+const client = globals.getGlobal('mongoDbClient');
 
-  // Sort the user data by total points in descending order
-  const sortedUserData = userData.sort((a, b) => b.total_points - a.total_points);
+async function sortUsersByPoints() {
+    console.log('[sortUsersByPoints]: Sorting users by points.');
 
-  // Write the sorted user data to a new file called sorted_users.json
-  fs.writeFileSync('topscores.json', JSON.stringify(sortedUserData));
+    try {
+        //await client.connect();
+        const collection = client.db("game1").collection("game1"); // replace with your DB and collection names
+
+        // Fetch all users
+        const userData = await collection.find({}).toArray();
+
+        // Sort the user data by total points in descending order
+        const sortedUserData = userData.sort((a, b) => b.total_points - a.total_points);
+
+        console.log('[sortUsersByPoints]: Users sorted successfully.');
+
+        globals.setGlobal("leaderboarddata", sortedUserData);
+
+    } catch (error) {
+        console.error('[sortUsersByPoints]: Error interacting with MongoDB:', error.message);
+    } finally {
+        // Close the MongoDB connection after we're done
+        //await client.close();
+    }
 }
 
 module.exports = sortUsersByPoints;
